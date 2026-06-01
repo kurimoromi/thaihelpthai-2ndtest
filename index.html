@@ -121,7 +121,7 @@ function todayKey(){return new Date().toLocaleDateString('en-CA',{timeZone:'Asia
 function nowThai(){return new Date().toLocaleString('th-TH',{timeZone:'Asia/Bangkok',dateStyle:'medium',timeStyle:'short'})}
 function todayUsed(){return getItems().filter(x=>x.day===todayKey()).reduce((a,b)=>a+b.gov,0)}
 
-// แยกฟังก์ชันหาค่าใช้ไปแล้วของเดือนจริง ออกจากส่วนจำลองเพื่อไม่ให้สูตร Preview เพี้ยน
+// แยกข้อมูลใน Database จริงออกจาก Logic การกดปุ่ม Simulation จำลองเพื่อป้องกันสิทธิ์เพี้ยน
 function dbMonthUsed(){return getItems().reduce((a,b)=>a+b.gov,0);}
 
 function calc(){
@@ -132,7 +132,7 @@ debugBox.style.display='none';
 
 let todayTotal=getItems().filter(x=>x.day===todayKey()).reduce((a,b)=>a+b.total,0);
 let todayGov=todayUsed();
-let monthGov=dbMonthUsed() + simMonthGovUsed; // ยอดรวมเดือนสะสม + ค่าจำลองทดสอบ
+let monthGov=dbMonthUsed() + simMonthGovUsed; 
 
 if(total<=0){
 gov.innerText='0.00 บาท';
@@ -187,10 +187,9 @@ let monthGov=dbMonthUsed() + simMonthGovUsed;
 let govRemainDay=Math.max(0,DAILY_CAP-todayGov);
 let govRemainMonth=Math.max(0,MONTH_CAP-monthGov);
 
-// คำนวณหาจุดตัดสิทธิ์ที่แท้จริงของบิลปัจจุบันก่อนจะบันทึกจริง
 let previewGov=Math.min(input*0.6, govRemainDay, govRemainMonth);
 
-// สิทธิ์วันนี้คงเหลือ (หักยอดพรีวิวออกเพื่อให้สะท้อนสิทธิ์หลังหักบิลที่กำลังพิมพ์อยู่)
+// สิทธิ์คงเหลือวันนี้ (แปลงเป็นยอดซื้อรวม) หลังหักพรีวิว
 let dailyPurchaseRemain=Math.max(0, (govRemainDay - previewGov)/0.6);
 dailyremain.innerText=fmt(dailyPurchaseRemain)+' บาท';
 
@@ -200,7 +199,7 @@ dailynote.innerHTML='<span class="alerttext">(วันนี้สิทธิ�
 dailynote.innerHTML='';
 }
 
-// [จุดที่แก้ไข]: คำนวณสิทธิ์คงเหลือรายเดือนสุทธิ (หักยอดพรีวิวของบิลที่กำลังจะบันทึกด้วย) ป้องกันตัวเลขกระโดดทะลุเพดาน
+// [FIXED] คำนวณหาโควตารายเดือนคงเหลือสุทธิ (แปลงเป็นยอดซื้อรวม) โดยล็อกให้ค่าต่ำสุดเป็น 0 เสมอ ไม่ปล่อยให้ติดลบจนตัวเลขดีดทะลุเพดาน
 let finalMonthGovRemain = Math.max(0, MONTH_CAP - (monthGov + previewGov));
 monthremain.innerText=fmt(finalMonthGovRemain/0.6)+' บาท';
 }
@@ -213,7 +212,7 @@ function saveItem(){
 let total=parseFloat(amount.value);
 if(!total||total<=0)return;
 let tr=Math.max(0,DAILY_CAP-todayUsed());
-let mr=Math.max(0,MONTH_CAP-dbMonthUsed()); // บันทึกจริงจะอิงข้อมูลจริงใน DB เท่านั้น
+let mr=Math.max(0,MONTH_CAP-dbMonthUsed()); 
 let gov=Math.min(total*0.6,tr,mr);
 let user=total-gov;
 let arr=getItems();
