@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thai Help Thai v31</title>
+<title>Thai Help Thai v32</title>
 <style>
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f5f7;margin:0;color:#1f2937}
@@ -41,11 +41,6 @@ input{width:100%;box-sizing:border-box;padding:16px;border:2px solid #d1d5db;bor
 .clear{width:100%;border:none;border-radius:16px;padding:14px;background:#9ca3af;color:white;font-size:15px;margin-top:16px}
 .debug-btn{background:none;border:none;color:#2563eb;font-size:13px;text-decoration:underline;cursor:pointer;margin-top:10px;padding:0;}
 .debug-box{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:12px;margin-top:10px;font-size:13px;color:#475569;display:none;line-height:1.5;}
-.sim-zone{background:#f1f5f9;padding:12px;border-radius:14px;margin-top:10px;border:1px solid #e2e8f0;}
-.sim-title{font-size:13px;font-weight:bold;color:#475569;margin-bottom:6px;}
-.sim-btn{background:white;border:1px solid #cbd5e1;padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer;color:#334155;margin-right:6px;margin-bottom:4px;font-weight:600;}
-.sim-btn:hover{background:#e2e8f0;}
-.sim-btn.active-sim{background:#2563eb;color:white;border-color:#2563eb;}
 </style>
 </head>
 <body>
@@ -67,13 +62,6 @@ input{width:100%;box-sizing:border-box;padding:16px;border:2px solid #d1d5db;bor
 <button class="add" onclick="saveItem()">เพิ่มรายการ</button>
 </div>
 <div id="inputwarn"></div>
-
-<div class="sim-zone">
-<div class="sim-title">🛠️ เครื่องมือจำลองยอดใช้สิทธิ์สะสมรายเดือน:</div>
-<button id="sim0" class="sim-btn active-sim" onclick="changeSimMonth(0)">ใช้งานปกติ (ตามจริง)</button>
-<button id="sim950" class="sim-btn" onclick="changeSimMonth(950)">จำลองใช้ไปแล้ว 950 บ. (เหลือสิทธิ์ 50 บ.)</button>
-<button id="sim1000" class="sim-btn" onclick="changeSimMonth(1000)">จำลองใช้ไปแล้ว 1,000 บ. (สิทธิ์หมดแล้ว)</button>
-</div>
 </div>
 
 <div class="grid">
@@ -83,7 +71,7 @@ input{width:100%;box-sizing:border-box;padding:16px;border:2px solid #d1d5db;bor
 </div>
 
 <div class="card green">
-<div class="title">...คุณจ่ายจริง...</div>
+<div class="title">ประชาชนจ่ายจริง</div>
 <div id="user" class="value">0.00 บาท</div>
 </div>
 </div>
@@ -122,7 +110,6 @@ input{width:100%;box-sizing:border-box;padding:16px;border:2px solid #d1d5db;bor
 
 <script>
 const DAILY_CAP = 200, MONTH_CAP = 1000;
-let simMonthGovUsed = 0; 
 
 function fmt(n){return Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function getItems(){return JSON.parse(localStorage.getItem('thaihelp_v15')||'[]')}
@@ -130,16 +117,7 @@ function saveItems(a){localStorage.setItem('thaihelp_v15',JSON.stringify(a))}
 function todayKey(){return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'})}
 function nowThai(){return new Date().toLocaleString('th-TH',{timeZone:'Asia/Bangkok',dateStyle:'medium',timeStyle:'short'})}
 function todayUsed(){return getItems().filter(x=>x.day===todayKey()).reduce((a,b)=>a+b.gov,0)}
-function monthUsed(){return getItems().reduce((a,b)=>a+b.gov,0) + simMonthGovUsed;}
-
-function changeSimMonth(val) {
-simMonthGovUsed = val;
-document.getElementById('sim0').classList.remove('active-sim');
-document.getElementById('sim950').classList.remove('active-sim');
-document.getElementById('sim1000').classList.remove('active-sim');
-document.getElementById('sim'+val).classList.add('active-sim');
-calc();
-}
+function monthUsed(){return getItems().reduce((a,b)=>a+b.gov,0)}
 
 function calc(){
 let total = parseFloat(amount.value) || 0;
@@ -166,7 +144,6 @@ let userReal = total - govReal;
 gov.innerText = fmt(govReal) + ' บาท';
 user.innerText = fmt(userReal) + ' บาท';
 
-// คำนวณหาจุดตัดสิทธิ์ที่แท้จริงตามเงื่อนไขกระเป๋าเงินที่เหลือ
 let maxPurchaseAllow = Math.min(govRemainDay, govRemainMonth) / 0.6;
 let overPurchase = Math.max(0, total - maxPurchaseAllow);
 
@@ -187,9 +164,9 @@ inputwarn.innerHTML = `<div class="warn red">❗ ยอดซื้อราย�
 debugBox.innerHTML = `
 <strong>📊 ข้อมูลการคำนวณเชิงลึก :</strong><br>
 • ยอดซื้อรายการนี้: ${fmt(total)} บาท<br>
-• ยอดซื้อที่หักสิทธิ์ได้เต็มระบบปกติ: ${fmt(Math.max(0, total - overPurchase))} บาท<br>
-• ยอดซื้อส่วนเกินระบบสิทธิ์ (ควักเนื้อ 100%): <span class="alerttext">${fmt(overPurchase)} บาท</span><br>
-• ค่าสินค้าที่หักผ่านสิทธิ์รัฐช่วยจริง: ${fmt(govReal)} บาท
+• ยอดซื้อที่หักสิทธิ์ได้ตามปกติ: ${fmt(Math.max(0, total - overPurchase))} บาท<br>
+• ยอดซื้อส่วนเกินสิทธิ์ (จ่ายเต็ม 100%): <span class="alerttext">${fmt(overPurchase)} บาท</span><br>
+• จำนวนเงินที่รัฐช่วยออกให้จริง: ${fmt(govReal)} บาท
 `;
 }
 renderRemain();
@@ -200,21 +177,19 @@ let input = parseFloat(amount.value) || 0;
 let todayGov = todayUsed();
 let monthGov = monthUsed();
 
-// บิลปัจจุบันจะดึงเงินไปใช้จริงเท่าไหร่
 let previewGov = Math.min(input * 0.6, Math.max(0, DAILY_CAP - todayGov), Math.max(0, MONTH_CAP - monthGov));
 
-// คำนวณค่าคงเหลือเรียลไทม์หลังจากหักพรีวิวบิลนี้ออกไปแล้ว
 let finalLeftDayGov = Math.max(0, DAILY_CAP - todayGov - previewGov);
 let finalLeftMonthGov = Math.max(0, MONTH_CAP - monthGov - previewGov);
 
-// แปลงกลับเป็นยอดซื้อสูงสุดที่ประชาชนสามารถซื้อได้
+// แสดงโควตายอดช็อปคงเหลือสูงสุดที่ระบบจะรับได้จริงหลังหักบิลนี้แบบเรียลไทม์
 let dailyPurchaseRemain = finalLeftDayGov / 0.6;
-let monthPurchaseRemain = (finalLeftMonthGov + Math.max(0, MONTH_CAP - monthGov - previewGov) / 0.6); 
+let monthPurchaseRemain = finalLeftMonthGov / 0.6;
 
 dailyremain.innerText = fmt(dailyPurchaseRemain) + ' บาท';
 
-if((DAILY_CAP - todayGov - previewGov) <= 0){
-if(MONTH_CAP - monthGov <= 0 || finalLeftMonthGov <= 0) {
+if(finalLeftDayGov <= 0){
+if((MONTH_CAP - monthGov - previewGov) <= 0) {
 dailynote.innerHTML = '<span class="alerttext">(สิทธิ์รายเดือนใช้เต็มวงเงิน 1,000 บาทแล้ว)</span>';
 } else {
 dailynote.innerHTML = '<span class="alerttext">(วันนี้สิทธิ์รัฐช่วยเต็มวงเงิน 200 บาทแล้ว)</span>';
@@ -223,7 +198,7 @@ dailynote.innerHTML = '<span class="alerttext">(วันนี้สิทธ�
 dailynote.innerHTML = '';
 }
 
-monthremain.innerText = fmt(finalLeftMonthGov * 2) + ' บาท'; // ยอดรวมรัฐ+ประชาชน (คูณ 2 หรือคิดจากฐานสิทธิ์คงเหลือ)
+monthremain.innerText = fmt(monthPurchaseRemain) + ' บาท';
 }
 
 function toggleDebugBox(){
