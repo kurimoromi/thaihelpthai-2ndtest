@@ -122,7 +122,7 @@ function monthUsed(){return getItems().reduce((a,b)=>a+b.gov,0)}
 function calc(){
 let total = parseFloat(amount.value) || 0;
 inputwarn.innerHTML = '';
-toggleDebug.style.display = 'none'; // ซ่อนปุ่มไว้ก่อนทุกครั้งที่เริ่มคีย์ใหม่
+toggleDebug.style.display = 'none';
 debugBox.style.display = 'none';
 debugBox.innerHTML = '';
 
@@ -150,6 +150,7 @@ let maxPurchaseAllow = Math.min(govRemainDay, govRemainMonth) / 0.6;
 let overPurchase = Math.max(0, total - maxPurchaseAllow);
 
 if (gov60 > govReal) {
+toggleDebug.style.display = 'block'; // แสดงปุ่มจิ้มดูรายละเอียดเมื่อเงื่อนไขเกินโควตาทำงาน
 let reason = "";
 if (govRemainMonth <= 0) {
 reason = "สิทธิ์รัฐช่วยรายเดือนหมดลงแล้ว";
@@ -162,7 +163,6 @@ reason = "ยอดรวมวันนี้ใช้สิทธิ์เก�
 }
 
 inputwarn.innerHTML = `<div class="warn red">❗ ยอดซื้อรายการนี้มีส่วนเกินเนื่องจาก${reason}</div>`;
-toggleDebug.style.display = 'block'; // [แก้ไข]: เด้งปุ่มดีบั๊กให้แสดงผลเมื่อสิทธิ์เกินโควตา
 
 debugBox.innerHTML = `
 <strong>📊 ข้อมูลการคำนวณเชิงลึก :</strong><br>
