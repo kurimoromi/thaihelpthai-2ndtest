@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thai Help Thai v28</title>
+<title>Thai Help Thai v29</title>
 <style>
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f5f7;margin:0;color:#1f2937}
@@ -41,8 +41,11 @@ input{width:100%;box-sizing:border-box;padding:16px;border:2px solid #d1d5db;bor
 .clear{width:100%;border:none;border-radius:16px;padding:14px;background:#9ca3af;color:white;font-size:15px;margin-top:16px}
 .debug-btn{background:none;border:none;color:#2563eb;font-size:13px;text-decoration:underline;cursor:pointer;margin-top:10px;padding:0;}
 .debug-box{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;padding:12px;margin-top:10px;font-size:13px;color:#475569;display:none;line-height:1.5;}
-.test-btn{background:#e2e8f0;border:1px solid #cbd5e1;padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer;margin-left:6px;color:#334155;margin-top:4px;}
-.test-btn:hover{background:#cbd5e1;}
+.sim-zone{background:#f1f5f9;padding:12px;border-radius:14px;margin-top:10px;border:1px solid #e2e8f0;}
+.sim-title{font-size:13px;font-weight:bold;color:#475569;margin-bottom:6px;}
+.sim-btn{background:white;border:1px solid #cbd5e1;padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer;color:#334155;margin-right:6px;margin-bottom:4px;font-weight:600;}
+.sim-btn:hover{background:#e2e8f0;}
+.sim-btn.active-sim{background:#2563eb;color:white;border-color:#2563eb;}
 </style>
 </head>
 <body>
@@ -64,6 +67,13 @@ input{width:100%;box-sizing:border-box;padding:16px;border:2px solid #d1d5db;bor
 <button class="add" onclick="saveItem()">เพิ่มรายการ</button>
 </div>
 <div id="inputwarn"></div>
+
+<div class="sim-zone">
+<div class="sim-title">🛠️ เครื่องมือจำลองยอดใช้สิทธิ์สะสมรายเดือน:</div>
+<button id="sim0" class="sim-btn active-sim" onclick="changeSimMonth(0)">ใช้งานปกติ (ตามจริง)</button>
+<button id="sim950" class="sim-btn" onclick="changeSimMonth(950)">จำลองใช้ไปแล้ว 950 บ. (เหลือสิทธิ์ 50 บ.)</button>
+<button id="sim1000" class="sim-btn" onclick="changeSimMonth(1000)">จำลองใช้ไปแล้ว 1,000 บ. (สิทธิ์หมดแล้ว)</button>
+</div>
 </div>
 
 <div class="grid">
@@ -91,7 +101,7 @@ input{width:100%;box-sizing:border-box;padding:16px;border:2px solid #d1d5db;bor
 </div>
 </div>
 
-<button id="toggleDebug" class="debug-btn" onclick="toggleDebugBox()" style="display:none;">[ จิ้มดูรายละเอียดการคำนวณเชิงลึก ]</button>
+<button id="toggleDebug" class="debug-btn" onclick="toggleDebugBox()">[ จิ้มดูรายละเอียดการคำนวณเชิงลึก ]</button>
 <div id="debugBox" class="debug-box"></div>
 
 <div class="section">
@@ -112,7 +122,7 @@ input{width:100%;box-sizing:border-box;padding:16px;border:2px solid #d1d5db;bor
 
 <script>
 const DAILY_CAP=200, MONTH_CAP=1000;
-let simMonthGovUsed = 0; 
+let simMonthGovUsed = 0; // ตัวแปรสำหรับเก็บค่าจำลองรายเดือน
 
 function fmt(n){return Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function getItems(){return JSON.parse(localStorage.getItem('thaihelp_v15')||'[]')}
@@ -121,18 +131,30 @@ function todayKey(){return new Date().toLocaleDateString('en-CA',{timeZone:'Asia
 function nowThai(){return new Date().toLocaleString('th-TH',{timeZone:'Asia/Bangkok',dateStyle:'medium',timeStyle:'short'})}
 function todayUsed(){return getItems().filter(x=>x.day===todayKey()).reduce((a,b)=>a+b.gov,0)}
 
-// แยกข้อมูลใน Database จริงออกจาก Logic การกดปุ่ม Simulation จำลองเพื่อป้องกันสิทธิ์เพี้ยน
-function dbMonthUsed(){return getItems().reduce((a,b)=>a+b.gov,0);}
+// ปรับให้ฟังก์ชันนี้รองรับค่าจำลองด้วย เพื่อให้ Logic ทั่วทั้งแอปเปลี่ยนตามปุ่มทดสอบ
+function monthUsed(){
+return getItems().reduce((a,b)=>a+b.gov,0) + simMonthGovUsed;
+}
+
+function changeSimMonth(val) {
+simMonthGovUsed = val;
+// อัปเดตสถานะปุ่มไฮไลท์
+document.getElementById('sim0').classList.remove('active-sim');
+document.getElementById('sim950').classList.remove('active-sim');
+document.getElementById('sim1000').classList.remove('active-sim');
+document.getElementById('sim'+val).classList.add('active-sim');
+
+calc(); // คำนวณใหม่ทันทีหลังกดปุ่ม
+}
 
 function calc(){
 let total=parseFloat(amount.value)||0;
 inputwarn.innerHTML='';
-toggleDebug.style.display='none';
-debugBox.style.display='none';
+debugBox.innerHTML='';
 
 let todayTotal=getItems().filter(x=>x.day===todayKey()).reduce((a,b)=>a+b.total,0);
 let todayGov=todayUsed();
-let monthGov=dbMonthUsed() + simMonthGovUsed; 
+let monthGov=monthUsed();
 
 if(total<=0){
 gov.innerText='0.00 บาท';
@@ -152,46 +174,37 @@ gov.innerText=fmt(govReal)+' บาท';
 user.innerText=fmt(userReal)+' บาท';
 
 let normalUserPay=total*0.4;
-let currentGovAllowed = Math.min(govRemainDay, govRemainMonth);
-let maxPurchaseAllow = currentGovAllowed / 0.6;
-let overPurchase = Math.max(0, total - maxPurchaseAllow);
 
-if(gov60 > govReal || (todayTotal + total) > 333.33 || simMonthGovUsed > 0){
-inputwarn.innerHTML='<div class="warn red">❗ ยอดรวมวันนี้ใช้สิทธิ์เกินโควตาของระบบแล้ว (รัฐช่วยครบวงเงินแล้ว)</div>';
-toggleDebug.style.display='block';
+// ถอดโค้ดจาก v26 มาดั้งเดิม 100%
+let maxPurchaseAllowToday = Math.min(govRemainDay / 0.6, govRemainMonth / 0.6);
+let overPurchase = Math.max(0, total - maxPurchaseAllowToday);
+
+if (gov60 > govReal) {
+inputwarn.innerHTML='<div class="warn red">❗ ยอดรวมใช้สิทธิ์เกินโควตาของระบบแล้ว (รัฐช่วยครบวงเงินแล้ว)</div>';
 
 debugBox.innerHTML=`
 <strong>📊 ข้อมูลการคำนวณเชิงลึก :</strong><br>
 • ยอดซื้อรายการนี้: ${fmt(total)} บาท<br>
-• ยอดซื้อสะสมเกินโควตามา (คงเหลือโควตาช็อปได้ ${fmt(Math.max(0, maxPurchaseAllow))} บาท) : <span class="alerttext">${fmt(overPurchase)} บาท</span><br>
-• หากจ่ายด้วยเรทปกติ (40%): ${fmt(normalUserPay)} บาท<br><br>
-<span style="color:#64748b; font-size:11px;">🛠️ เครื่องมือทดสอบโควตารายเดือน (ไม่กระทบฐานข้อมูลจริง):</span><br>
-<button class="test-btn" onclick="setSimMonth(0)">รีเซ็ตบิลเดือนนี้</button>
-<button class="test-btn" onclick="setSimMonth(950)">จำลองว่าเดือนนี้รัฐช่วยไปแล้ว 950บ. (เหลือสิทธิ์ 50บ.)</button>
-<button class="test-btn" onclick="setSimMonth(1000)">จำลองว่าเดือนนี้สิทธิ์รัฐหมดแล้ว (ช่วยครบ 1,000บ.)</button>
+• ยอดซื้อสะสมเกินโควตาวันมา (คงเหลือ ${fmt(Math.max(0, maxPurchaseAllowToday))} บาท) : <span class="alerttext">${fmt(overPurchase)} บาท</span><br>
+• หากจ่ายด้วยเรทปกติ (40%): ${fmt(normalUserPay)} บาท
 `;
 }
 renderRemain();
 }
 
-function setSimMonth(val) {
-simMonthGovUsed = val;
-calc();
-}
-
 function renderRemain(){
 let input=parseFloat(amount.value)||0;
+let todayTotal=getItems().filter(x=>x.day===todayKey()).reduce((a,b)=>a+b.total,0);
 let todayGov=todayUsed();
-let monthGov=dbMonthUsed() + simMonthGovUsed; 
+let monthGov=monthUsed();
 
-let govRemainDay=Math.max(0,DAILY_CAP-todayGov);
-let govRemainMonth=Math.max(0,MONTH_CAP-monthGov);
+// ใช้สูตร v26 ดั้งเดิมในการพรีวิว
+let previewGov=Math.min(input*0.6, Math.max(0,DAILY_CAP-todayGov), Math.max(0,MONTH_CAP-monthGov));
+let currentMonthGovRemain=Math.max(0,MONTH_CAP-(monthGov+previewGov));
 
-let previewGov=Math.min(input*0.6, govRemainDay, govRemainMonth);
+let dailyPurchaseRemain=Math.max(0,(DAILY_CAP-todayGov-previewGov)/0.6);
 
-// สิทธิ์คงเหลือวันนี้ (แปลงเป็นยอดซื้อรวม) หลังหักพรีวิว
-let dailyPurchaseRemain=Math.max(0, (govRemainDay - previewGov)/0.6);
-dailyremain.innerText=fmt(dailyPurchaseRemain)+' บาท';
+dailyremain.innerText=fmt(Math.max(0,dailyPurchaseRemain))+' บาท';
 
 if(dailyPurchaseRemain<=0){
 dailynote.innerHTML='<span class="alerttext">(วันนี้สิทธิ์รัฐช่วยเต็มวงเงิน 200 บาทแล้ว)</span>';
@@ -199,9 +212,8 @@ dailynote.innerHTML='<span class="alerttext">(วันนี้สิทธิ�
 dailynote.innerHTML='';
 }
 
-// [FIXED] คำนวณหาโควตารายเดือนคงเหลือสุทธิ (แปลงเป็นยอดซื้อรวม) โดยล็อกให้ค่าต่ำสุดเป็น 0 เสมอ ไม่ปล่อยให้ติดลบจนตัวเลขดีดทะลุเพดาน
-let finalMonthGovRemain = Math.max(0, MONTH_CAP - (monthGov + previewGov));
-monthremain.innerText=fmt(finalMonthGovRemain/0.6)+' บาท';
+// แสดงค่าโควตารายเดือนคงเหลือตาม Logic v26
+monthremain.innerText=fmt(currentMonthGovRemain/0.6)+' บาท';
 }
 
 function toggleDebugBox(){
@@ -212,14 +224,14 @@ function saveItem(){
 let total=parseFloat(amount.value);
 if(!total||total<=0)return;
 let tr=Math.max(0,DAILY_CAP-todayUsed());
-let mr=Math.max(0,MONTH_CAP-dbMonthUsed()); 
+let mr=Math.max(0,MONTH_CAP-monthUsed());
 let gov=Math.min(total*0.6,tr,mr);
 let user=total-gov;
 let arr=getItems();
 arr.push({day:todayKey(),time:nowThai(),total,gov,user});
 saveItems(arr);
 amount.value='';
-simMonthGovUsed = 0; 
+// เมื่อบันทึกจริง ยอดจำลองจะยังอยู่ตามปุ่มที่เลือกไว้ เพื่อให้ทดสอบต่อเนื่องได้สะดวก
 renderAll(); calc();
 }
 
